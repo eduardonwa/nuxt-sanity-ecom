@@ -48,6 +48,11 @@ export const productType = defineType({
             validation: (Rule) => Rule.required(),
         }),
         defineField({
+            name: 'stock',
+            type: 'string',
+            title: 'Inventario'
+        }),
+        defineField({
             name: 'stripeProductId',
             type: 'string',
             title: 'Stripe Product ID',

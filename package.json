@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@nuxtjs/sanity": "^2.0.0",
+    "@sanity/client": "^7.14.0",
     "@sanity/image-url": "^2.0.2",
     "@sanity/preview-url-secret": "^4.0.2",
     "@sanity/webhook": "^4.0.4",
@@ -19,5 +20,8 @@
     "stripe": "^20.1.2",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "dotenv": "^17.2.3"
   }
 }

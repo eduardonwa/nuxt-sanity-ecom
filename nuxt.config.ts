@@ -4,8 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/sanity'],
   runtimeConfig: {
-    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
     sanityWebhookSecret: process.env.SANITY_WEBHOOK_SECRET,
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_KEY,
     // solo para el Server Route (Nitro)
     sanityServer: {
       projectId: process.env.SANITY_PROJECT_ID,
