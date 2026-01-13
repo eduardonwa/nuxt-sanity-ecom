@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@sanity/client";
+import crypto from "node:crypto";
 
 type Body = {
   items: Array<{ variantId: string; quantity: number }>;
@@ -91,6 +92,7 @@ export default defineEventHandler(async (event) => {
     customerEmail: body.customer?.email || null,
     items: body.items.map((i) => ({
       _type: "orderItem",
+      _key: crypto.randomUUID(),
       variant: { _type: "reference", _ref: i.variantId },
       quantity: i.quantity,
       stripePriceId: byId.get(i.variantId)!.stripePriceId,

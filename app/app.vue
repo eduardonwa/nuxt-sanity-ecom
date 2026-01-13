@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { firstVariantQuery, type VariantResult } from "../queries";
+import { variantsQuery, type VariantResult } from "../queries";
 
-const { data: variant, pending } = await useSanityQuery<VariantResult>(firstVariantQuery);
+const { data: variants, pending } = await useSanityQuery<VariantResult[]>(variantsQuery);
 
-async function pay() {
-  if (!variant.value?._id) return;
-
-  const cartItems = [
-    { variantId: variant.value._id, quantity: 1 },
-  ];
-
+async function pay(variantId: string) {
   const res = await $fetch<{ url: string }>("/api/checkout-session", {
     method: "POST",
-    body: { items: cartItems },
+    body: {
+      items: [{ variantId, quantity: 1 }],
+    },
   });
 
   window.location.href = res.url;
@@ -24,13 +20,15 @@ async function pay() {
     <div v-if="pending">Loading...</div>
 
     <div v-else>
-      <h1>{{ variant?.title }} — {{ variant?.format }}</h1>
-      <p>Precio: {{ variant?.price }} {{ variant?.currency?.toUpperCase() }}</p>
-      <p>Stock: {{ variant?.stock ?? "?" }}</p>
+      <div v-for="v in (variants || [])" :key="v._id">
+        <h1>{{ v.title }} — {{ v.format }}</h1>
+        <p>Precio: {{ v.price }} {{ v.currency.toUpperCase() }}</p>
+        <p>Stock: {{ v.stock }}</p>
 
-      <button :disabled="!variant?._id || (variant?.stock ?? 0) <= 0" @click="pay">
-        Pagar ahora
-      </button>
+        <button :disabled="v.stock <= 0" @click="pay(v._id)">
+          Pagar ahora
+        </button>
+      </div>
     </div>
   </div>
 </template>

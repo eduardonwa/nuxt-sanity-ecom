@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     sanityWebhookSecret: process.env.SANITY_WEBHOOK_SECRET,
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
-    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_KEY,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     // solo para el Server Route (Nitro)
     sanityServer: {
       projectId: process.env.SANITY_PROJECT_ID,
