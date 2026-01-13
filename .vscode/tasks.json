@@ -1,0 +1,74 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Dev: npm run dev (Nuxt)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: npm run dev (Sanity)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/ecometal"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: ngrok http 3000",
+      "type": "shell",
+      "command": "npx ngrok http 3000",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "tunnels"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Stripe listen (webhook -> localhost:3000/api/stripe-webhook)",
+      "type": "shell",
+      "command": "stripe listen --forward-to http://localhost:3000/api/stripe-webhook",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "payments"
+      },
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Startup: dev stack (auto)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Dev: npm run dev (Nuxt)",
+        "Dev: npm run dev (Sanity)",
+        "Dev: ngrok http 3000",
+        "Dev: Stripe listen (webhook -> localhost:3000/api/stripe-webhook)"
+      ],
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

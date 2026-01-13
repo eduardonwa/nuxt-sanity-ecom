@@ -22,7 +22,6 @@ export default defineNuxtConfig({
     projectId: process.env.SANITY_PROJECT_ID,
     dataset: process.env.SANITY_DATASET,
     apiVersion: process.env.SANITY_API_VERSION,
-    token: process.env.SANITY_WRITE_TOKEN,
     useCdn: true,
     visualEditing: {
       token: process.env.SANITY_VIEWER_TOKEN,
@@ -31,7 +30,7 @@ export default defineNuxtConfig({
   },
   vite: {
     server: {
-      allowedHosts: ["b8810db0a39f.ngrok-free.app"]
+      allowedHosts: ['.ngrok-free.app']
     }
   }
 })
