@@ -3,7 +3,7 @@ import { createClient } from "@sanity/client";
 import { isValidSignature, SIGNATURE_HEADER_NAME } from "@sanity/webhook";
 import { createImageUrlBuilder } from "@sanity/image-url";
 
-function getProductId(payload: any): string | null {
+function getDocId(payload: any): string | null {
   if (payload?._id) return payload._id;
   if (payload?.document?._id) return payload.document._id;
   if (Array.isArray(payload?.ids) && payload.ids[0]) return payload.ids[0];
@@ -13,7 +13,7 @@ function getProductId(payload: any): string | null {
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
 
-  // ✅ 1) Validar firma del webhook (sin secret en URL)
+  // 1) Validar firma (Sanity)
   if (!config.sanityWebhookSecret) {
     throw createError({ statusCode: 500, statusMessage: "Missing SANITY_WEBHOOK_SECRET" });
   }
@@ -23,25 +23,23 @@ export default defineEventHandler(async (event) => {
     getHeader(event, SIGNATURE_HEADER_NAME.toLowerCase());
 
   if (!signature) {
-    // console.log("Headers:", getHeaders(event));
     throw createError({ statusCode: 401, statusMessage: "Missing Sanity signature" });
   }
 
   const rawBodyBuf = await readRawBody(event);
   const rawBody = rawBodyBuf?.toString() || "";
-
   if (!rawBody) {
     throw createError({ statusCode: 400, statusMessage: "Missing raw body" });
   }
-  
+
   const valid = await isValidSignature(rawBody, signature, config.sanityWebhookSecret);
   if (!valid) {
     throw createError({ statusCode: 401, statusMessage: "Invalid Sanity signature" });
   }
 
-  // ✅ 2) Ya validado → parsear JSON (NO uses readBody antes)
   const payload = JSON.parse(rawBody);
 
+  // 2) Configs
   if (!config.stripeSecretKey) {
     throw createError({ statusCode: 500, statusMessage: "Missing STRIPE_SECRET_KEY" });
   }
@@ -51,9 +49,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: "Missing sanityServer config/token" });
   }
 
-  const productId = getProductId(payload);
-  if (!productId) {
-    throw createError({ statusCode: 400, statusMessage: "No product id in webhook payload" });
+  const variantId = getDocId(payload);
+  if (!variantId) {
+    throw createError({ statusCode: 400, statusMessage: "No variant id in webhook payload" });
   }
 
   const sanity = createClient({
@@ -64,70 +62,92 @@ export default defineEventHandler(async (event) => {
     useCdn: false,
   });
 
-  const product = await sanity.fetch<{
+  // 3) Traer variant + product (name/cover)
+  const variant = await sanity.fetch<{
     _id: string;
-    name: string;
     price: number;
     currency: string;
-    cover?: any;
+    stock?: number;
+    format?: string;
     stripeProductId?: string;
     stripePriceId?: string;
+    product?: {
+      name?: string;
+      cover?: any;
+    };
   }>(
-    `*[_type=="product" && _id==$id][0]{
-        _id,
+    `*[_type=="variant" && _id==$id][0]{
+      _id,
+      price,
+      currency,
+      stock,
+      format,
+      stripeProductId,
+      stripePriceId,
+      product->{
         name,
-        price,
-        currency,
-        cover,
-        stripeProductId,
-        stripePriceId
-      }`,
-    { id: productId }
+        cover
+      }
+    }`,
+    { id: variantId }
   );
 
-  if (!product) throw createError({ statusCode: 404, statusMessage: "Product not found in Sanity" });
-  if (!product.name || !product.price || !product.currency) {
-    throw createError({ statusCode: 400, statusMessage: "Missing name/price/currency in Sanity" });
+  if (!variant) throw createError({ statusCode: 404, statusMessage: "Variant not found in Sanity" });
+  if (variant.price == null || !variant.currency) {
+    throw createError({ statusCode: 400, statusMessage: "Missing price/currency in Variant" });
+  }
+  if (!variant.product?.name) {
+    throw createError({ statusCode: 400, statusMessage: "Variant missing product.name" });
   }
 
-  // (Opcional recomendado) Evitar que alguien meta centavos por error en Sanity
-  // Ajusta el umbral a tu gusto:
-  if (product.price > 100000) {
+  // Anti-error: precio en pesos
+  if (variant.price > 100000) {
     throw createError({ statusCode: 400, statusMessage: "Price seems too large. Use pesos, not cents." });
   }
 
+  // 4) Builder imagen (sale del PRODUCT)
   const builder = createImageUrlBuilder({
     projectId: sanityCfg.projectId,
     dataset: sanityCfg.dataset,
   });
 
-  const coverUrl = product.cover
-    ? builder.image(product.cover).width(1000).url()
+  const coverUrl = variant.product.cover
+    ? builder.image(variant.product.cover).width(1000).url()
     : null;
 
+  // 5) Stripe
   const stripe = new Stripe(config.stripeSecretKey);
 
-  // Stripe product
-  let stripeProductId = product.stripeProductId;
+  // Nombre Stripe product = Album — Formato
+  const stripeName = variant.format
+    ? `${variant.product.name} — ${variant.format}`
+    : variant.product.name;
+
+  // Stripe product (por VARIANT)
+  let stripeProductId = variant.stripeProductId;
+
   if (!stripeProductId) {
     const created = await stripe.products.create({
-      name: product.name,
-      metadata: { sanityId: product._id },
+      name: stripeName,
+      metadata: { sanityVariantId: variant._id },
+      ...(coverUrl ? { images: [coverUrl] } : {}),
     });
+
     stripeProductId = created.id;
-    await sanity.patch(product._id).set({ stripeProductId }).commit();
+
+    await sanity.patch(variant._id).set({ stripeProductId }).commit();
   } else {
     await stripe.products.update(stripeProductId, {
-      name: product.name,
+      name: stripeName,
       ...(coverUrl ? { images: [coverUrl] } : {}),
     });
   }
 
-  // Stripe price (crear nuevo si hace falta o si cambió)
-  const desiredUnitAmount = Math.round(product.price * 100); // Sanity guarda pesos
-  const desiredCurrency = product.currency.toLowerCase();
+  // Stripe price (crear nuevo si cambió)
+  const desiredUnitAmount = Math.round(variant.price * 100);
+  const desiredCurrency = variant.currency.toLowerCase();
 
-  let stripePriceId = product.stripePriceId;
+  let stripePriceId = variant.stripePriceId;
   let needsNewPrice = !stripePriceId;
 
   if (stripePriceId) {
@@ -155,7 +175,7 @@ export default defineEventHandler(async (event) => {
     stripePriceId = newPrice.id;
 
     await sanity
-      .patch(product._id)
+      .patch(variant._id)
       .set({
         stripePriceId,
         stripePriceActive: true,
@@ -163,5 +183,5 @@ export default defineEventHandler(async (event) => {
       .commit();
   }
 
-  return { ok: true, sanityId: product._id, stripeProductId, stripePriceId };
+  return { ok: true, sanityVariantId: variant._id, stripeProductId, stripePriceId };
 });

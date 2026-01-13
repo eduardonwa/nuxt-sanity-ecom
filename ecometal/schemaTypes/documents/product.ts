@@ -18,6 +18,22 @@ export const productType = defineType({
             validation: (Rule) => Rule.required(),
         }),
         defineField({
+            name: 'bandOrArtist',
+            type: 'string',
+            title: 'Banda/artista',
+            validation: (Rule) => Rule.required(),
+        }),
+        defineField({
+            name: 'label',
+            type: 'string',
+            title: 'Sello'
+        }),
+        defineField({
+            name: 'releaseDate',
+            type: 'string',
+            title: 'Fecha de lanzamiento'
+        }),
+        defineField({
             name: 'slug',
             type: 'slug',
             title: 'Slug',
@@ -26,49 +42,6 @@ export const productType = defineType({
                 maxLength: 96
             },
             validation: (Rule) => Rule.required(),
-        }),
-        defineField({
-            name: 'price',
-            type: 'number',
-            title: 'Precio',
-            validation: (Rule) => Rule.required(),
-        }),
-        defineField({
-            name: 'currency',
-            type: 'string',
-            title: 'Moneda',
-            initialValue: 'mxn',
-            options: {
-                list: [
-                    { title: 'MXN', value: 'mxn' },
-                    { title: 'USD', value: 'usd' }
-                ],
-                layout: 'radio',
-            },
-            validation: (Rule) => Rule.required(),
-        }),
-        defineField({
-            name: 'stock',
-            type: 'string',
-            title: 'Inventario'
-        }),
-        defineField({
-            name: 'stripeProductId',
-            type: 'string',
-            title: 'Stripe Product ID',
-            readOnly: true
-        }),
-        defineField({
-            name: 'stripePriceId',
-            type: 'string',
-            title: 'Stripe Price ID',
-            readOnly: true
-        }),
-        defineField({
-            name: 'stripePriceActive',
-            type: 'boolean',
-            title: 'Stripe Price activo',
-            readOnly: true
-        }),
+        })
     ]
 })

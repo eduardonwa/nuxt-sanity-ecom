@@ -1,5 +1,8 @@
 import { productType } from "./documents/product";
+import { variantType } from "./documents/variant";
 
 export const schemaTypes = [
-    productType
+    // documentos
+    productType,
+    variantType
 ]

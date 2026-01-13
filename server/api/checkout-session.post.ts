@@ -65,10 +65,21 @@ export default defineEventHandler(async (event) => {
   // Validación de stock (momento actual)
   for (const item of body.items) {
     const v = byId.get(item.variantId);
-    if (!v) throw createError({ statusCode: 400, statusMessage: `Variant not found: ${item.variantId}` });
-    if (!v.stripePriceId) throw createError({ statusCode: 400, statusMessage: `Variant missing stripePriceId: ${v.title || v._id}` });
+    if (!v) throw createError({
+      statusCode: 400,
+      statusMessage: `Variant not found: ${item.variantId}`
+    });
+
+    if (!v.stripePriceId) throw createError({
+      statusCode: 400,
+      statusMessage: `Variant missing stripePriceId: ${v.title || v._id}`
+    });
+    
     if (!Number.isFinite(v.stock) || v.stock < item.quantity) {
-      throw createError({ statusCode: 409, statusMessage: `No hay stock suficiente: ${v.title || v._id}` });
+      throw createError({
+        statusCode: 409,
+        statusMessage: `No hay stock suficiente: ${v.title || v._id}`
+      });
     }
   }
 

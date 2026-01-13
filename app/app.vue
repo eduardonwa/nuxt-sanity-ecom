@@ -1,29 +1,36 @@
 <script setup lang="ts">
-  import { pageQuery, type PageResult } from '../queries'
-  const { data, pending } = await useSanityQuery<PageResult>(pageQuery)
- 
+import { firstVariantQuery, type VariantResult } from "../queries";
+
+const { data: variant, pending } = await useSanityQuery<VariantResult>(firstVariantQuery);
+
+async function pay() {
+  if (!variant.value?._id) return;
+
   const cartItems = [
-    { name: "Disco X", unit_amount: 49900, quantity: 1 },
+    { variantId: variant.value._id, quantity: 1 },
   ];
 
-  async function pay() {
-    const res = await $fetch<{ url: string }>("/api/checkout-session", {
-      method: "POST",
-      body: { items: cartItems },
-    });
+  const res = await $fetch<{ url: string }>("/api/checkout-session", {
+    method: "POST",
+    body: { items: cartItems },
+  });
 
-    window.location.href = res.url;
-  }
+  window.location.href = res.url;
+}
 </script>
 
 <template>
   <div>
-    <NuxtRouteAnnouncer />
     <div v-if="pending">Loading...</div>
-    <h1 v-else>{{ data?.title }}</h1>
 
-    <button @click="pay">
-      Pagar ahora
-    </button>
+    <div v-else>
+      <h1>{{ variant?.title }} — {{ variant?.format }}</h1>
+      <p>Precio: {{ variant?.price }} {{ variant?.currency?.toUpperCase() }}</p>
+      <p>Stock: {{ variant?.stock ?? "?" }}</p>
+
+      <button :disabled="!variant?._id || (variant?.stock ?? 0) <= 0" @click="pay">
+        Pagar ahora
+      </button>
+    </div>
   </div>
 </template>
